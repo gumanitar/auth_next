@@ -4,9 +4,6 @@ import { nextCookies } from "better-auth/next-js";
 import { db } from "@/drizzle/db";
 
 export const auth = betterAuth({
-  emailAndPassword: {
-    enabled: true,
-  },
   socialProviders: {
     github: {
       clientId: process.env.GITHUB_CLIENT_ID!,
