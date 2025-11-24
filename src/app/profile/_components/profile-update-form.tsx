@@ -18,6 +18,8 @@ import { format } from "path";
 import { is } from "drizzle-orm";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
+import { routerServerGlobal } from "next/dist/server/lib/router-utils/router-server-context";
+import { useRouter } from "next/navigation";
 
 const profileUpdateSchema = z.object({
   name: z.string().min(1),
@@ -36,19 +38,30 @@ export default function ProfileUpdateForm({
 }) {
   const form = useForm<ProfileUpdateForm>({
     resolver: zodResolver(profileUpdateSchema),
-    defaultValues: user
+    defaultValues: user,
   });
 
   const { isSubmitting } = form.formState;
+  const router = useRouter();
 
   async function handleProfileUpdate(data: ProfileUpdateForm) {
-    authClient.updateUser
-    
+    const res = await authClient.updateUser({
+      name: data.name,
+    });
+    if (res.error) {
+      toast.error(res.error.message || "Failed to update profile");
+    } else {
+      toast.success("Profile updeted successfully");
+    }
+    router.refresh();
   }
 
   return (
     <Form {...form}>
-      <form className="space-y-4" onSubmit={form.handleSubmit(handleProfileUpdate)}>
+      <form
+        className="space-y-4"
+        onSubmit={form.handleSubmit(handleProfileUpdate)}
+      >
         <FormField
           control={form.control}
           name="name"
@@ -70,7 +83,7 @@ export default function ProfileUpdateForm({
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input {...field} />
+                <Input disabled {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

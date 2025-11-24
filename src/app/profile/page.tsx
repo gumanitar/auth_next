@@ -4,29 +4,32 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { auth } from "@/lib/auth"
+import { auth } from "@/lib/auth";
 import {
   ArrowLeft,
   Key,
   LinkIcon,
+  Loader2Icon,
   Shield,
   Trash2,
   User,
-} from "lucide-react"
-import { headers } from "next/headers"
-import Image from "next/image"
-import Link from "next/link"
-import { redirect } from "next/navigation"
-import ProfileUpdateForm from "./_components/profile-update-form"
-
+} from "lucide-react";
+import { headers } from "next/headers";
+import Image from "next/image";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import ProfileUpdateForm from "./_components/profile-update-form";
+import { ReactNode, Suspense } from "react";
+import ChangePasswordForm from "./_components/change-password-form";
+import SetPasswordButton from "./_components/set-password-button";
 
 export default async function ProfilePage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (session == null) return redirect("/auth/login");
- return (
+  return (
     <div className="max-w-4xl mx-auto my-6 px-4">
       <div className="mb-8">
         <Link href="/" className="inline-flex items-center mb-6">
@@ -59,48 +62,45 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      { <Tabs className="space-y-2" defaultValue="profile">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="profile">
-            <User />
-            <span className="max-sm:hidden">Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield />
-            <span className="max-sm:hidden">Security</span>
-          </TabsTrigger>
-          <TabsTrigger value="sessions">
-            <Key />
-            <span className="max-sm:hidden">Sessions</span>
-          </TabsTrigger>
-          <TabsTrigger value="accounts">
-            <LinkIcon />
-            <span className="max-sm:hidden">Accounts</span>
-          </TabsTrigger>
-          <TabsTrigger value="danger">
-            <Trash2 />
-            <span className="max-sm:hidden">Danger</span>
-          </TabsTrigger>
-        </TabsList>
+      {
+        <Tabs className="space-y-2" defaultValue="profile">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="profile">
+              <User />
+              <span className="max-sm:hidden">Profile</span>
+            </TabsTrigger>
+            <TabsTrigger value="security">
+              <Shield />
+              <span className="max-sm:hidden">Security</span>
+            </TabsTrigger>
+            <TabsTrigger value="sessions">
+              <Key />
+              <span className="max-sm:hidden">Sessions</span>
+            </TabsTrigger>
+            <TabsTrigger value="accounts">
+              <LinkIcon />
+              <span className="max-sm:hidden">Accounts</span>
+            </TabsTrigger>
+            <TabsTrigger value="danger">
+              <Trash2 />
+              <span className="max-sm:hidden">Danger</span>
+            </TabsTrigger>
+          </TabsList>
 
+          <TabsContent value="profile">
+            <Card>
+              <CardContent>
+                <ProfileUpdateForm user={session.user} />
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="profile">
-          <Card>
-            <CardContent>
-              <ProfileUpdateForm user={session.user} /> 
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* <TabsContent value="security">
-          <LoadingSuspense>
-            <SecurityTab
-              email={session.user.email}
-              isTwoFactorEnabled={session.user.twoFactorEnabled ?? false}
-            />
-          </LoadingSuspense>
-        </TabsContent>
-
+          <TabsContent value="security">
+            <LoadingSuspense>
+              <SecurityTab email={session.user.email} />
+            </LoadingSuspense>
+          </TabsContent>
+          {/*
         <TabsContent value="sessions">
           <LoadingSuspense>
             <SessionsTab currentSessionToken={session.session.token} />
@@ -123,7 +123,53 @@ export default async function ProfilePage() {
             </CardContent>
           </Card>
         </TabsContent> */}
-      </Tabs> }
+        </Tabs>
+      }
     </div>
-  )
+  );
+}
+
+async function SecurityTab({ email }: { email: string }) {
+  const accounts = await auth.api.listUserAccounts({
+    headers: await headers(),
+  });
+  const hasPasswordAccount = accounts.some(
+    (a) => a.providerId === "credential"
+  );
+
+  return (
+    <div className="space-y-6">
+      {hasPasswordAccount ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Change Password</CardTitle>
+            <CardDescription>Update your password</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChangePasswordForm />
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>Set Password</CardTitle>
+            <CardDescription>
+              You will get a password reset email
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SetPasswordButton email={email} />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function LoadingSuspense({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<Loader2Icon className="size-20 animate-spin" />}>
+      {children}
+    </Suspense>
+  );
 }
